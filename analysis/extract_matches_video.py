@@ -28,7 +28,6 @@ def create_params(args):
     matches = os.listdir(args.matches_metadata_folder_path)
     matches = sorted(matches, key=lambda x: int(x.split('_')[-1]))
     for i, match in enumerate(matches):
-        if i != 1: continue
         match_folder_path = os.path.join(args.matches_metadata_folder_path, match)
         rounds = os.listdir(match_folder_path)
         rounds = sorted(rounds, key=lambda x: int(x.split('_')[-1].split('.')[0]))
@@ -44,7 +43,6 @@ def create_params(args):
             for round in rounds:
                 round_file_path = os.path.join(match_folder_path, round)
                 round_info = json.load(open(round_file_path, 'r'))
-                if round_info['round_idx'] != 1: continue
                 start_time = round_datetime(round_info['start_time']) # It is in UTC time
                 end_time = round_datetime(round_info['end_time'], round_upper=True) # It is in UTC time
                 seek_time = (start_time - initial_UTC_time + initial_stream_time).total_seconds() + time_deviation[j]
