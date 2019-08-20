@@ -28,6 +28,7 @@ def create_params(args):
     matches = os.listdir(args.matches_metadata_folder_path)
     matches = sorted(matches, key=lambda x: int(x.split('_')[-1]))
     for i, match in enumerate(matches):
+        if i > 0: continue
         match_folder_path = os.path.join(args.matches_metadata_folder_path, match)
         rounds = os.listdir(match_folder_path)
         rounds = sorted(rounds, key=lambda x: int(x.split('_')[-1].split('.')[0]))
@@ -35,6 +36,7 @@ def create_params(args):
         match_metadata = sorted(match_metadata, key=lambda x: int(x[1][1:]))
         num_perspective = match_metadata.__len__()
         for j in range(num_perspective):
+            if j > 0: continue
             metadata = match_metadata[j]
             video_name = metadata[2]
             video_filepath = os.path.join(args.video_folder_path, video_name)
@@ -52,9 +54,14 @@ def create_params(args):
                 # match_videos
                 #   |__match_{$id}
                 #       |__ round_{$id}
-                #           |__ video_name (base on the origin video name - player's perspective video name)
-                output_video_filepath = os.path.join(args.output_folder_path, 'match_{}'.format(i+1), 'round_{}'.format(round_info['round_idx']), video_name)
-                params.append([video_filepath, output_video_filepath, seek_time, to_time])
+                #           |__ video
+                #               |__ video_name 
+                #           |__ metadata
+                #               |__ metadata_name 
+                output_folder = os.path.join(args.output_folder_path, 'match_{}'.format(i+1), 'round_{}'.format(round_info['round_idx']))
+                output_video_filepath = os.path.join(output_folder, 'video', video_name)
+                output_metadata_filepath = os.path.join(output_folder, 'metadata', video_name.split('.')[0] + '.csv')
+                params.append([video_filepath, output_video_filepath, output_metadata_filepath, seek_time, to_time])
     return params
 
 
@@ -62,15 +69,20 @@ def run_cut_video(p):
     """
     - p is an item in the list params in create_params function
     """
-    video_filepath, output_video_filepath, seek_time, to_time = p
-    if os.path.exists(output_video_filepath):
+    video_filepath, output_video_filepath, output_metadata_filepath, seek_time, to_time = p
+    if os.path.exists(output_video_filepath) and os.path.exists(output_metadata_filepath):
         # ignore processed files
         return
     output_video_folder = str(Path(output_video_filepath).parent)
+    output_metadata_folder = str(Path(output_metadata_filepath).parent)
     if not os.path.exists(output_video_folder):
         os.makedirs(output_video_folder)
+    if not os.path.exists(output_metadata_folder):
+        os.makedirs(output_metadata_folder)
+    with open(output_metadata_filepath, 'w') as f:
+        f.write('start_time, end_time, start_second, end_second\n')
+        f.write('{},{},{},{}'.format(to_standard_ffmpeg_format(seek_time), to_standard_ffmpeg_format(to_time), seek_time, to_time))
     delta_time = to_time - seek_time
-    print(seek_time)
     seek_time = to_standard_ffmpeg_format(seek_time)
     delta_time = to_standard_ffmpeg_format(delta_time)
     cmd = 'ffmpeg -ss {} -vsync 1 -i {} -strict -2 -t {} -c copy {}'.format(seek_time, video_filepath, delta_time, output_video_filepath)
