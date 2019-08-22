@@ -5,6 +5,7 @@ import argparse
 from pathlib import Path
 sys.path.append(str(Path(os.getcwd())))
 from utils.time_utils import time_this
+from utils.exec_multiprocess import MultiProcessTask
 
 
 def create_argparse():
@@ -21,7 +22,7 @@ def run_extract_frame(p):
         os.makedirs(output_folder)
     else:
         return
-    cmd = "ffmpeg -i {} -vcodec png -r 1 -an -f image2 {}/%6d.png".format(video_path, output_folder)
+    cmd = "ffmpeg -i {} -f image2 -vf fps=1 {}/%6d.jpg".format(video_path, output_folder)
     print(cmd)
     subprocess.call(cmd, shell=True)
 
@@ -50,5 +51,5 @@ def create_params(args):
 if __name__ == '__main__':
     args = create_argparse()
     params = create_params(args)
-    for p in params:
-        run_extract_frame(p)
+    mtp = MultiProcessTask(params, run_extract_frame)
+    mtp.run_multiprocess()

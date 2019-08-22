@@ -28,7 +28,6 @@ def create_params(args):
     matches = os.listdir(args.matches_metadata_folder_path)
     matches = sorted(matches, key=lambda x: int(x.split('_')[-1]))
     for i, match in enumerate(matches):
-        if i > 0: continue
         match_folder_path = os.path.join(args.matches_metadata_folder_path, match)
         rounds = os.listdir(match_folder_path)
         rounds = sorted(rounds, key=lambda x: int(x.split('_')[-1].split('.')[0]))
@@ -36,7 +35,6 @@ def create_params(args):
         match_metadata = sorted(match_metadata, key=lambda x: int(x[1][1:]))
         num_perspective = match_metadata.__len__()
         for j in range(num_perspective):
-            if j > 0: continue
             metadata = match_metadata[j]
             video_name = metadata[2]
             video_filepath = os.path.join(args.video_folder_path, video_name)
