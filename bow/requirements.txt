@@ -1,0 +1,4 @@
+opencv-python==3.4.2.17
+matplotlib
+opencv-contrib-python==3.4.2.17
+scipy
