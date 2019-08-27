@@ -1,4 +1,3 @@
-
 import time
 import numpy as np
 import torch
@@ -17,6 +16,7 @@ def create_argparse():
     parser = argparse.ArgumentParser(description="Arguments for K-mean clustering")
     parser.add_argument('features_file_path')
     parser.add_argument('output_folder')
+    parser.add_argument('--checkpoint_filepath', dest='checkpoint_filepath')
 #    parser.add_argument('max_iter', type=int)
     return parser.parse_args()
 
@@ -30,16 +30,23 @@ args = create_argparse()
 
 
 
-def KMeans(x, K, Niter=10, verbose=True):
+def KMeans(x, K, checkpoint_filepath=None, Niter=10, verbose=True):
     print("Start K-Means clustering")
     N, D = x.shape
-    c = x[:K, :].clone()
+    start = 0
+    if checkpoint_filepath is not None:
+        c = torch.load(checkpoint_filepath)
+        start = int(os.path.basename(checkpoint_filepath).split('.')[0])
+        print("Load checkpoint {}...".format(checkpoint_filepath))
+    else:
+        c = x[:K, :].clone()
+        print("Initialize new center...")
     batch_size = N // 1000 + 1
     Nbatch_iter = N // batch_size
     print("Number of batch iterations: {}".format(Nbatch_iter))
     print("Number of clusters: {}".format(K))
     print("Number of data: {}".format(N))
-    for i in range(Niter):
+    for i in range(start, Niter):
         print("--- Iteration {}...".format(i+1))
         start = time.time()
         new_center = torch.zeros(c.shape, dtype=torchtype[dtype])
@@ -81,5 +88,5 @@ if __name__ == '__main__':
     x = np.load(args.features_file_path)
     K = x.shape[0] // 1000
     x = torch.Tensor(x).type(torchtype[dtype])
-    c = KMeans(x, K)
+    c = KMeans(x, K, checkpoint_filepath=args.checkpoint_filepath)
 

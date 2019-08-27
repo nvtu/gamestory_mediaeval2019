@@ -1,75 +1,72 @@
 import numpy as np 
 from pathlib import Path
 import os
-from multiprocessing import Process
+import argparse
+import sys
+sys.path.append(str(Path(os.path.dirname(os.path.abspath(__file__))).parent))
+from utils.exec_multiprocess import MultiProcessTask
 
 
-vbow_dir = str(Path.cwd() / 'vbow_feat')
-if not os.path.isdir(vbow_dir):
-    os.mkdir(vbow_dir)
-tf_dir = str(Path.cwd() / 'tf_feat')
-image_dir = str(Path.cwd() / 'LSC_DATA')
-idf_path = str(Path.cwd() / 'idf.npy')
-idf = np.load(idf_path)
+def create_argparse():
+    parser = argparse.ArgumentParser(description="Argument for vbow vectorize")
+    parser.add_argument("term_freq_folder")
+    parser.add_argument("idf_file_path")
+    parser.add_argument("output_folder_path")
+    return parser.parse_args()
 
 
-def vbow_create(tf_feat, idf):
+args = create_argparse()
+idf = np.load(args.idf_file_path)
+
+
+def create_params(args):
+    print("Creating params vbow vectorization...")
+    params = []
+    output_folder_path = os.path.join(args.output_folder_path, 'vbow')
+    for root, _, files in os.walk(args.term_freq_folder):
+        for f in files:
+            file_path = os.path.join(root, f)
+            output_file_path = file_path.replace(args.term_freq_folder, output_folder_path)
+            params.append([file_path, output_file_path])
+    return params
+
+
+def vbow_create(p):
+    file_path, output_file_path = p
+    output_dir_path = os.path.dirname(output_file_path)
+    if not os.path.exists(output_dir_path):
+        os.makedirs(output_dir_path)
+    if os.path.exists(output_file_path):
+        return
+    print("BOVW vectorize {}...".format(file_path))
+    tf_feat = np.load(file_path)
     vbow_feat = tf_feat * idf
-    vbow_feat = vbow_feat / np.sum(vbow_feat) # Normalize feature
-    return vbow_feat
+    normed_vbow_feat = vbow_feat / np.linalg.norm(vbow_feat)
+    np.save(output_file_path, normed_vbow_feat)
 
 
-def employ_task(params):
-    for p in params:
-        _f, fout_path = p
-        tf_feat = np.load(_f)
-        vbow_feat = vbow_create(tf_feat, idf)
-        np.save(fout_path, vbow_feat)
+def combine_vbow_into_one_file(vbow_folder_path):
+    vbow_total = []
+    for root, _, files in os.walk(vbow_folder_path):
+        for f in files:
+            file_path = os.path.join(root, f)
+            feat = np.load(file_path)
+            vbow_total.append(feat)
+    vbow_total = np.vstack(np.array(vbow_total))        
+    return vbow_total
 
-
-def multiprocessing_vectorize(params):
-    num_processes = 20
-    task_per_process = len(params) // num_processes + 1
-    tasks = []
-    for i in range(num_processes):
-        sub_p = params[i * task_per_process : min((i+1) * task_per_process, len(params))]
-        tasks.append(Process(target=employ_task, args=(sub_p,)))
-        tasks[-1].start()
-    for t in tasks:
-        t.join()
 
 
 if __name__ == '__main__':
     # vbow feature extraction
-    tf_list = []
-    for root, dirs, files in os.walk(tf_dir):
-        for d in dirs:
-            _d = os.path.join(root, d)
-            _d = _d.replace(tf_dir, vbow_dir)
-            if not os.path.isdir(_d):
-                os.mkdir(_d)
-        for f in files:
-            _f = os.path.join(root, f)
-            fout_path = _f.replace(tf_dir, vbow_dir)
-            if os.path.exists(fout_path): continue
-            tf_list.append((_f, fout_path))
-    multiprocessing_vectorize(tf_list)
+    params = create_params(args)
+    mtp = MultiProcessTask(params, vbow_create)
+    mtp.run_multiprocess()
 
     # Combine vbow feature into one file
     vbow_total = []
-    vbow_total_filepath = str(Path.cwd() / 'vbow_total.npy')
-    image_paths = []
+    vbow_total_filepath = os.path.join(args.output_folder_path, 'vbow_total.npy')
+    vbow_folder_path = os.path.join(args.output_folder_path, 'vbow')
     if not os.path.exists(vbow_total_filepath):
-        for root, dirs, files in os.walk(vbow_dir):
-            for f in files:
-                _f = os.path.join(root, f)
-                file_name = f.split('.')[0] + '.jpg'
-                org_image_filepath = os.path.join(root.replace(vbow_dir, image_dir), file_name)
-                image_paths.append(org_image_filepath)
-                tf_feat = np.load(_f)            
-                vbow_total.append(tf_feat.T)
-        vbow_total = np.vstack(np.array(vbow_total))
+        vbow_total = combine_vbow_into_one_file(vbow_folder_path)
         np.save(vbow_total_filepath, vbow_total)
-        with open('image_path_order.txt', 'w') as f:
-            for line in image_paths:
-                print(line, file=f)

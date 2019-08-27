@@ -2,82 +2,80 @@ import numpy as np
 from sklearn.neighbors import NearestNeighbors
 from pathlib import Path
 import os
+import sys
 import subprocess
-from multiprocessing import Process
+sys.path.append(str(Path(os.path.dirname(os.path.abspath(__file__))).parent))
+from utils.exec_multiprocess import MultiProcessTask
+import argparse
 
 
-def load_model():
-    vbow_total_filepath = str(Path.cwd() / 'vbow_total.npy')
+def create_argparse():
+    parser = argparse.ArgumentParser(description="Arguments for nearest neighbor search")
+    parser.add_argument('vbow_total_file_path')
+    parser.add_argument('image_path_order_file_path')
+    parser.add_argument('input_folder_path')
+    parser.add_argument('output_folder_path')
+    return parser.parse_args()
+
+
+def load_model(vbow_total_filepath):
+    print("Loading knn model...")
     vbow_total = np.load(vbow_total_filepath)
-    neigh = NearestNeighbors(n_neighbors=200)
+    neigh = NearestNeighbors(n_neighbors=1000)
     neigh.fit(vbow_total)
     return neigh
 
 
-model = load_model()
-image_order_filepath = str(Path.cwd() / 'image_path_order.txt')
-image_order = [line.rstrip() for line in open(image_order_filepath, 'r').readlines()]
-image_dir = str(Path.cwd() / 'LSC_DATA')
+def load_image_path_order(image_path_order_filepath):
+    print("Loading image path order...")
+    image_path_order = [line.rstrip() for line in open(image_path_order_filepath, 'r').readlines()]
+    return image_path_order
+
+
+args = create_argparse()
+model = load_model(args.vbow_total_file_path)
+image_order = load_image_path_order(args.image_path_order_file_path)
+
+
+def create_params(args):
+    print("Creating params for nearest neighbor search...")
+    params = []
+    for root, _, files in os.walk(args.input_folder_path):
+        for f in files:
+            file_path = os.path.join(root, f)
+            output_file_name = f.replace('.npy', '.txt')
+            output_file_path = file_path.replace(args.input_folder_path, args.output_folder_path)
+            output_file_path = output_file_path.replace(f, output_file_name)
+            params.append([file_path, output_file_path])
+    return params
 
 
 def nearest_neighs(vbow_feat):
-    k_nearest = model.kneighbors(vbow_feat.T)
+    N, = vbow_feat.shape
+    feat = vbow_feat.reshape((1, N))
+    k_nearest = model.kneighbors(feat)
     distance = k_nearest[0][0] 
     k_nearest_index = k_nearest[1][0]
     rank_list = [image_order[index] for index in k_nearest_index]
     return rank_list, distance
 
 
-def employ_task(params):
-    for p in params:
-        _f, fout_path = p
-        print('Processing {}'.format(_f))
-        vbow_feat = np.load(_f)
-        rank_list, distance = nearest_neighs(vbow_feat)
-        with open(fout_path, 'w') as f:
-            for i, file_path in enumerate(rank_list):
-                print('{},{}'.format(file_path, distance[i]), file=f)
-
-
-def multiprocess_infer(params):
-    num_processes = 20
-    task_per_process = len(params) // num_processes + 1
-    tasks = []
-    for i in range(num_processes):
-        sub_p = params[i * task_per_process : min((i+1) * task_per_process, len(params))]
-        tasks.append(Process(target=employ_task, args=(sub_p,)))
-        tasks[-1].start()
-    for t in tasks:
-        t.join()
+def run_nnsearch(p):
+    file_path, output_file_path = p
+    output_dir_path = os.path.dirname(output_file_path)
+    if not os.path.exists(output_dir_path):
+        os.makedirs(output_dir_path)
+    if os.path.exists(output_file_path):
+        return
+    print("Processing {}...".format(file_path))
+    vbow_feat = np.load(file_path)
+    rank_list, distance = nearest_neighs(vbow_feat)
+    with open(output_file_path, 'w') as f:
+        for i, file_path in enumerate(rank_list):
+            print('{},{}'.format(file_path, distance[i]), file=f)
 
 
 if __name__ == '__main__':
-    vbow_dir = str(Path.cwd() / 'vbow_feat')
-    vbow_result_dir = str(Path.cwd() / 'vbow_result')
-    if not os.path.isdir(vbow_result_dir):
-        os.mkdir(vbow_result_dir)
-    vbow_feats = []
-    for root, dirs, files in os.walk(vbow_dir):
-        for d in dirs:
-            _d = os.path.join(root, d).replace(vbow_dir, vbow_result_dir)
-            if not os.path.isdir(_d):
-                os.mkdir(_d)
-        
-        for f in files:
-            _f = os.path.join(root, f)
-            fout_path = _f.replace(vbow_dir, vbow_result_dir).replace('.npy', '.txt')
-            if os.path.exists(fout_path): continue
-            vbow_feats.append((_f, fout_path))
-    multiprocess_infer(vbow_feats)
-
-    # vbow_feat_filepath = os.path.join(vbow_dir, '2016-08-23', '20160823_062708_000.npy')
-    # vbow_feat = np.load(vbow_feat_filepath)
-    # image_path = vbow_feat_filepath.replace(vbow_dir, image_dir).replace('.npy', '.jpg')
-    # k_nearest = model.kneighbors(vbow_feat.T, return_distance=False)
-    # rank_list = [image_order[index] for index in k_nearest[0]]
-    # cmd = 'cp {} {}'.format(image_path, str(Path.cwd() / 'query'))
-    # subprocess.call(cmd, shell=True)
-    # for f in rank_list:
-    #     cmd = 'cp {} {}'.format(f, str(Path.cwd() / 'visualize')) 
-    #     print(cmd)
-    #     subprocess.call(cmd, shell=True)
+    params = create_params(args) 
+    mtp = MultiProcessTask(params, run_nnsearch)
+    mtp.run_multiprocess()
