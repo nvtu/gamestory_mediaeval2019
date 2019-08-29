@@ -47,7 +47,7 @@ if __name__ == '__main__':
     args = create_argparse()
     if not os.path.exists(args.output_folder_path):
         os.makedirs(args.output_folder_path)
-    frame_paths = [os.path.join(args.frames_folder_path, item) for item in os.listdir(args.frames_folder_path)]
+    frame_paths = [os.path.join(args.frames_folder_path, item) for item in sorted(os.listdir(args.frames_folder_path))]
     num_frames = len(frame_paths)
     color_diff_threshold = 0.2
     bf_match_threshold = 300
