@@ -81,8 +81,6 @@ def generate_idf(total_images, tf_total):
 
 
 if __name__ == '__main__':
-    args = create_argparse()
-    cluster_centers = torch.load(args.cluster_center_file_path).numpy()
     params = create_params(args)
     total_images = params.__len__()
     for p in params:

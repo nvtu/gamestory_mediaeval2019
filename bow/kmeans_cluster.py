@@ -30,7 +30,7 @@ args = create_argparse()
 
 
 
-def KMeans(x, K, checkpoint_filepath=None, Niter=10, verbose=True):
+def KMeans(x, K, checkpoint_filepath=None, Niter=20, verbose=True):
     print("Start K-Means clustering")
     N, D = x.shape
     start = 0
@@ -86,7 +86,8 @@ if __name__ == '__main__':
     if not os.path.exists(args.output_folder):
         os.makedirs(args.output_folder)
     x = np.load(args.features_file_path)
-    K = x.shape[0] // 1000
+#    K = x.shape[0] // 1000
+    K = 32768
     x = torch.Tensor(x).type(torchtype[dtype])
     c = KMeans(x, K, checkpoint_filepath=args.checkpoint_filepath)
 
