@@ -54,11 +54,7 @@ if __name__ == '__main__':
     i = 0
     j = 1
     while i < num_frames:
-        if i == num_frames - 1:
-            output_file_path = frame_paths[i].replace(args.frame_folder_path, args.output_folder_path)
-            copy_image(frame_paths[i], output_file_path)
-            exit(0)
-        while j < num_frames:
+       while j < num_frames:
             dist = compute_color_hist_diff(frame_paths[i], frame_paths[j])
             num_matches = compute_orb_diff(frame_paths[i], frame_paths[j])
             print('Difference score between {}-frame and {}-frame: {} - {} matches'.format(i+1, j+1, dist, num_matches))
@@ -70,3 +66,8 @@ if __name__ == '__main__':
                 i = j
                 j += 1
                 break
+        if i == num_frames - 1 or j == num_frames:
+            output_file_path = frame_paths[i].replace(args.frame_folder_path, args.output_folder_path)
+            copy_image(frame_paths[i], output_file_path)
+            exit(0)
+ 
