@@ -1,1 +1,6 @@
 __pycache__
+*.pyc
+*.obj
+*.DS_Store
+.vscode
+
