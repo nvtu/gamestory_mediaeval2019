@@ -78,8 +78,8 @@ def find_match_and_round(replay_begin_time, times, infos):
     idx = 0
     print(replay_begin_time)
     while idx < times.__len__():
-        if replay_begin_time >= times[idx]:
-            return infos[idx]
+        if replay_begin_time < times[idx]:
+            return infos[idx-1]
         idx += 1
 
 
