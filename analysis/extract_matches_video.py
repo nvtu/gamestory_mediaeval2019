@@ -20,7 +20,8 @@ def create_argparse():
 
 
 def create_params(args):
-    time_deviation = [36, 31, 34, 33, 30, 33, 33, 32, 33, 34] # magic numbers
+    # time_deviation = [36, 31, 34, 33, 30, 33, 33, 32, 33, 34] # magic numbers for train videos
+    time_deviation = [36, 37, 38, 37, 39, 35, 38, 38, 37, 39] # magic numbers for test videos
     print("Creating necessary parameters to cut videos...")
     params = []
     df = pd.read_csv(args.gameplay_metadata_file_path)

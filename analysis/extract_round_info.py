@@ -37,7 +37,7 @@ def get_lastest_time(round_info):
             filtered_content += round_info[idx-1:idx+1]
             idx += 2
         else:
-            idx += 1
+            idx += 1 
     return filtered_content
 
 
@@ -66,7 +66,8 @@ def extract_round_info(timelines):
         else:
             temp_match_container.append(new_round)
         prev_round_idx = round_idx
-    matches.append(temp_match_container)
+    if temp_match_container.__len__() > 0:
+        matches.append(temp_match_container)
     return matches
 
 
