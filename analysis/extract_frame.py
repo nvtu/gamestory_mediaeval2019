@@ -22,7 +22,7 @@ def run_extract_frame(p):
         os.makedirs(output_folder)
     else:
         return
-    cmd = "ffmpeg -i {} -f image2 -vf fps=60 {}/%6d.jpg".format(video_path, output_folder)
+    cmd = "ffmpeg -i {} -f image2 -vf fps=59 {}/%6d.jpg".format(video_path, output_folder)
     print(cmd)
     subprocess.call(cmd, shell=True)
 
