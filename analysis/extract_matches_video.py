@@ -93,5 +93,6 @@ if __name__ == '__main__':
     args = create_argparse()
     params = create_params(args)
     for p in params:
-        run_cut_video(p)
+        print(p)
+        #run_cut_video(p)
         # exit(0)
