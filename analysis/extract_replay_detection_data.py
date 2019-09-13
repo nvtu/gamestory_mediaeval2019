@@ -7,7 +7,7 @@ import pandas as pd
 
 default_start_time = 13001 # Match 1 start time in P11 video 03:36:41
 extracted_fps = 2
-real_fps = 60
+real_fps = 59 
 
 
 def create_argparse():
@@ -78,6 +78,8 @@ def find_match_and_round(replay_begin_time, times, infos):
     idx = 0
     while idx < times.__len__():
         if replay_begin_time < times[idx]:
+            if replay_begin_time - times[idx-1] < 30:
+                return infos[idx-2]
             return infos[idx-1]
         idx += 1
 
